@@ -1,29 +1,16 @@
-#!/usr/bin/make -f
-
+# Local build and test only — CI is the sole publisher.
+# Shared pipelines: https://github.com/nforceroh/.github
 SHELL := /bin/bash
-IMG_NAME := alpine-nginx
-IMG_REPO := nforceroh
-DOCKERCMD := docker
-VERSION := php85
+IMAGE ?= ghcr.io/nforceroh/nginx-php
+TAG   ?= dev
 
-#oc get route default-route -n openshift-image-registry
-#podman login -u sylvain -p $(oc whoami -t) default-route-openshift-image-registry.apps.ocp.nf.lab
+.PHONY: build test
 
-.PHONY: all build push gitcommit gitpush create
-all: build push 
-git: gitcommit gitpush 
+build:
+	docker build \
+		--build-arg BUILD_DATE="$(shell date -u +'%Y-%m-%dT%H:%M:%SZ')" \
+		--build-arg VERSION="$(TAG)" \
+		--tag $(IMAGE):$(TAG) .
 
-build: 
-	@echo "Building $(IMG_NAME) image"
-	$(DOCKERCMD) build \
-		--tag $(IMG_REPO)/$(IMG_NAME) . --no-cache
-
-push: 
-	@echo "Tagging and Pushing $(IMG_NAME):$(VERSION) image"
-	$(DOCKERCMD) tag $(IMG_REPO)/$(IMG_NAME) docker.io/$(IMG_REPO)/$(IMG_NAME):$(VERSION)
-	$(DOCKERCMD) tag $(IMG_REPO)/$(IMG_NAME) docker.io/$(IMG_REPO)/$(IMG_NAME):latest
-	$(DOCKERCMD) push docker.io/$(IMG_REPO)/$(IMG_NAME):$(VERSION)
-	$(DOCKERCMD) push docker.io/$(IMG_REPO)/$(IMG_NAME):latest
-
-end:
-	@echo "Done!"
+test: build
+	./tests/run_tests.sh "$(IMAGE):$(TAG)"
