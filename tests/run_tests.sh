@@ -61,6 +61,18 @@ check "s6 service database is populated" \
 
 check "directory /etc/nginx exists" in_image 'test -d /etc/nginx'
 check "nginx, php, bash present on PATH" in_image 'command -v nginx && command -v php && command -v bash'
+check "php resolves to php85" in_image 'test "$(readlink /usr/bin/php)" = php85'
+check "composer installed" in_image 'command -v composer'
+check "php-fpm config includes /config/php" \
+	in_image "grep -qxF 'include=/config/php/*.conf' /etc/php85/php-fpm.conf"
+check "nginx default config present" in_image 'test -f /etc/nginx/nginx.conf && test -f /etc/nginx/conf.d/default.conf'
+check "default configs removed" \
+	in_image 'test ! -f /etc/nginx/conf.d/stream.conf && test ! -f /etc/nginx/http.d/default.conf'
+check "nginx logs symlinked to stdout/stderr" \
+	in_image 'test "$(readlink /var/log/nginx/access.log)" = /dev/stdout && test "$(readlink /var/log/nginx/error.log)" = /dev/stderr'
+check "web root exists" in_image 'test -d /data/web'
+check "php-fpm serves a request" \
+	in_image 'php -r "echo \"php-ok\";" | grep -q php-ok'
 
 # --- boot check -------------------------------------------------------------
 # Leaf images need external services (databases, rspamd, ...) to settle, so

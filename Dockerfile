@@ -12,6 +12,7 @@ LABEL \
   org.label-schema.vcs-ref="${VERSION}" \
   org.label-schema.schema-version="1.0"
 
+### Install nginx, PHP and their modules
 RUN \
   apk add --no-cache \
     memcached \
@@ -65,26 +66,24 @@ RUN \
     php85-sqlite3 \
     php85-tokenizer \
     php85-xmlreader \
-    php85-xsl
+    php85-xsl \
+  && rm -rf /var/cache/apk/*
 
+### Configure nginx and the PHP runtime
 RUN \
-  echo "**** configure nginx ****" \
-  && rm -f /etc/nginx/conf.d/stream.conf \
+  rm -f /etc/nginx/conf.d/stream.conf \
   && rm -f /etc/nginx/http.d/default.conf \
   && ln -sf /dev/stdout /var/log/nginx/access.log \
   && ln -sf /dev/stderr /var/log/nginx/error.log \
   && adduser -u 82 -D -S -G www-data www-data \
   && mkdir -p /data/web \
-  && echo "**** guarantee correct php version is symlinked ****"  \
   && if [ "$(readlink /usr/bin/php)" != "php85" ]; then \
     rm -rf /usr/bin/php  && \
     ln -s /usr/bin/php85 /usr/bin/php; \
-  fi 
+  fi
 
+### Install composer
 RUN \
-  echo "**** add run paths to php runtime config ****" \
-  && grep -qxF 'include=/config/php/*.conf' /etc/php85/php-fpm.conf || echo 'include=/config/php/*.conf' >> /etc/php85/php-fpm.conf  \
-  && echo "**** install php composer ****" && \
   EXPECTED_CHECKSUM="$(php -r 'copy("https://composer.github.io/installer.sig", "php://stdout");')" && \
   php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');" && \
   ACTUAL_CHECKSUM="$(php -r "echo hash_file('sha384', 'composer-setup.php');")" && \
@@ -96,13 +95,19 @@ RUN \
   php composer-setup.php --install-dir=/usr/bin && \
   rm composer-setup.php
 
+### Add Files
 ADD /content /
 ADD --chmod=755 /content/etc/s6-overlay /etc/s6-overlay
 
+### Runtime config that must survive the ADD above
+RUN \
+  grep -qxF 'include=/config/php/*.conf' /etc/php85/php-fpm.conf \
+  || printf '\ninclude=/config/php/*.conf\n' >> /etc/php85/php-fpm.conf \
+  && ln -sf /usr/bin/composer.phar /usr/bin/composer
 
 # ports and volumes
 EXPOSE 8080
 
 VOLUME /config
 
-#ENTRYPOINT [ "/init" ]
+ENTRYPOINT [ "/init" ]

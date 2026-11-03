@@ -22,3 +22,6 @@ jobs:
       packages: write
       attestations: write
       id-token: write
+    with:
+      # Stable pin for consumers (snappymail, vimbadmin), per the layer contract.
+      extra-tags: "3.24"

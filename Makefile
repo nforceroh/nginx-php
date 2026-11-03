@@ -4,7 +4,7 @@ SHELL := /bin/bash
 IMAGE ?= ghcr.io/nforceroh/nginx-php
 TAG   ?= dev
 
-.PHONY: build test
+.PHONY: build test run
 
 build:
 	docker build \
@@ -14,3 +14,11 @@ build:
 
 test: build
 	./tests/run_tests.sh "$(IMAGE):$(TAG)"
+
+# Base image for downstream web apps (snappymail, vimbadmin): serves
+# /data/web over 8080. Mount your app at /data/web and config at /config.
+run: build
+	docker run --rm -it \
+		-p 8080:8080 \
+		-v "$$PWD/../../nginx-php-config:/config" \
+		$(IMAGE):$(TAG)
