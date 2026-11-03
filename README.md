@@ -56,6 +56,23 @@ make test    # build, then run tests/run_tests.sh
 make run     # run with a /config mount and 8080 published
 ```
 
+For a deployment, mount the PHP drop-in directory at `/config/php` and your
+application files at `/data/web` (or build an image from this base). For
+example:
+
+```sh
+docker run -d --name php-app \
+  --restart unless-stopped \
+  -p 8080:8080 \
+  -v "$PWD/web:/data/web:ro" \
+  -v "$PWD/php-config:/config/php:ro" \
+  ghcr.io/nforceroh/nginx-php:latest
+```
+
+The local `make run` target expects the sibling `../../nginx-php-config`
+directory to exist. The example above can be used when your config lives
+elsewhere.
+
 CI is the only publisher — see
 [nforceroh/.github](https://github.com/nforceroh/.github) for the shared build and
 cleanup workflows. Published tags: `3.24` (stable pin), `latest`, `main`, date and sha
